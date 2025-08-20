@@ -66,46 +66,135 @@ This project demonstrates **service-based architecture** with clear separation o
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) v18+
-- [pnpm](https://pnpm.io/) v8+
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
-- Cloudflare account
+- [pnpm](https://pnpm.io/) v8+  
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (included in project dependencies)
+- **GitHub account** (required for deployment pipelines)
+- **Cloudflare account** (free - sign up at [cloudflare.com](https://cloudflare.com))
 
 ### Quick Start
 
-1. **Fork this repository** to your GitHub account
+> ⚠️ **Important**: You must **fork** this repository (not just clone) to enable deployment features later in the course.
 
-2. **Clone your fork**:
+1. **Fork this repository** to your GitHub account using the Fork button
+
+2. **Clone your fork** (replace `YOUR_USERNAME`):
    ```bash
    git clone https://github.com/YOUR_USERNAME/full-stack-on-cloudlare-starter-repo.git
    cd full-stack-on-cloudlare-starter-repo
    ```
 
-3. **Install dependencies**:
+3. **Install all dependencies**:
    ```bash
    pnpm install
    ```
 
-4. **Start development servers**:
+4. **Build the DataOps package** (required first step):
    ```bash
-   # Terminal 1: Start user application (port 3000)
-   pnpm dev-frontend
-   
-   # Terminal 2: Start data service  
-   pnpm dev-data-service
+   pnpm run build-package
    ```
 
-5. **Open your browser** to `http://localhost:3000`
+5. **Start the frontend application**:
+   ```bash
+   pnpm run dev-frontend
+   ```
+
+6. **Open your browser** to `http://localhost:3000`
+
+You should see the marketing landing page. Click "Get Started for Free" to view the dashboard with sample data.
+
+### Alternative Development Approach
+
+You can also work within individual applications:
+
+```bash
+# Navigate to specific app
+cd apps/user-application
+
+# Run development server directly
+pnpm dev
+```
+
+This approach is useful when focusing on a single feature or service.
+
+## 🚀 First Deployment
+
+After getting the development server running, deploy immediately to understand the platform:
+
+### Deploy to Cloudflare Workers
+
+1. **Navigate to user application**:
+   ```bash
+   cd apps/user-application
+   ```
+
+2. **Deploy your application**:
+   ```bash
+   pnpm run deploy
+   ```
+
+3. **First-time authentication**: 
+   - Wrangler CLI will open your browser
+   - Click "Allow" to grant access to your Cloudflare account
+
+4. **Access your deployed app**:
+   - You'll receive a URL like: `user-application.{your-name}.workers.dev`
+   - Your app is now live on Cloudflare's global edge network!
+
+### What Happens During Deployment
+
+The deploy command:
+- **Builds your application** (`npm run build`) into production-ready bundles
+- **Uploads static assets** (JS, HTML, CSS) to Cloudflare's global CDN
+- **Deploys Worker code** to handle server-side requests
+- **Configures routing** based on your `wrangler.jsonc` settings
+
+### Cloudflare Dashboard
+
+After deployment, visit the [Cloudflare Dashboard](https://dash.cloudflare.com):
+- Navigate to **Workers & Pages** 
+- Find your `user-application` deployment
+- View metrics, logs, deployments, and configure settings
+- Monitor real-time analytics and error traces
+
+## ☁️ Cloudflare Resources Overview
+
+This course builds a comprehensive SaaS application using multiple Cloudflare services:
+
+| Resource | Type | Purpose | Used In |
+|----------|------|---------|---------|
+| **Workers** | Compute | Frontend + Backend services | Both applications |
+| **Pages** | Static Hosting | Alternative deployment method | User application |
+| **D1** | SQLite Database | Application data storage | Both applications |
+| **Queues** | Message Processing | Async background jobs | Data service |
+| **Durable Objects** | Stateful Computing | Real-time WebSocket management | Data service |
+| **Workflows** | Job Orchestration | Multi-step link analysis | Data service |
+| **Workers AI** | AI Inference | Content analysis at edge | Data service |
+| **Browser Rendering** | Serverless Browser | Page screenshots/analysis | Data service |
+| **KV** | Key-Value Store | Session & cache storage | Both applications |
+| **R2** | Object Storage | File & image storage | Data service |
+| **Analytics Engine** | Metrics Collection | Usage analytics | Both applications |
+| **Custom Domains** | DNS & Routing | Production domains | User application |
+
+### Why This Stack?
+
+- **🌍 Global Edge**: All services run on Cloudflare's 270+ city network
+- **💰 Cost Effective**: Pay-per-use pricing with generous free tiers
+- **🔗 Integrated**: Services work seamlessly together with minimal configuration
+- **⚡ Performance**: Sub-10ms cold starts and built-in CDN
+- **🛠️ Developer Experience**: Simple deployment and excellent tooling
 
 ## 📚 Course Learning Path
 
 This repository is structured as a **progressive learning experience**:
 
 ### 🎯 Core Learning Objectives
-- **Service Architecture**: Learn to build scalable microservices
-- **Edge Computing**: Leverage Cloudflare's global edge network
+- **Service Architecture**: Learn to build scalable microservices with clear boundaries
+- **Edge Computing**: Leverage Cloudflare's global edge network for performance
 - **Type Safety**: End-to-end TypeScript with tRPC and Drizzle
-- **Modern SaaS Patterns**: Authentication, payments, analytics
-- **AI Integration**: Practical AI features in production apps
+- **Modern SaaS Patterns**: Authentication, payments, analytics, real-time features
+- **AI Integration**: Practical AI features with Workers AI and browser rendering
+- **Deployment Mastery**: Deploy early and often to understand the platform deeply
+- **Wrangler Expertise**: Master Cloudflare's CLI tool for resource management
 
 ### 📖 Course Structure
 Each section builds upon the previous, covering:
@@ -173,23 +262,55 @@ This course demonstrates why Cloudflare is the **perfect middle ground** between
 
 ## 📁 Project Structure
 
+This monorepo contains **multiple applications and shared packages**:
+
 ```
-├── apps/
-│   ├── user-application/          # React frontend + tRPC backend
-│   │   ├── src/                   # React application
-│   │   │   ├── components/        # UI components
-│   │   │   ├── routes/           # TanStack Router routes
-│   │   │   └── hooks/            # Custom React hooks
-│   │   └── worker/               # Cloudflare Worker backend
-│   │       ├── index.ts          # Worker entry point
-│   │       └── trpc/             # tRPC router & procedures
-│   └── data-service/             # Background processing service
-│       ├── src/                  # Service implementation
-│       └── test/                 # Service tests
-├── packages/
-│   └── data-ops/                 # Shared database operations
-└── package.json                  # Monorepo configuration
+├── apps/                          # Individual applications/services
+│   ├── data-service/              # Background processing service
+│   │   ├── src/
+│   │   │   └── index.ts           # WorkerEntrypoint main service
+│   │   ├── test/                  # Vitest tests with Workers pool
+│   │   ├── service-bindings.d.ts  # TypeScript service bindings
+│   │   ├── wrangler.jsonc         # Cloudflare Worker configuration
+│   │   └── vitest.config.mts      # Test configuration
+│   └── user-application/          # React frontend + tRPC backend
+│       ├── src/                   # React application source
+│       │   ├── components/        # UI components (auth, dashboard, home-page, link, ui)
+│       │   ├── routes/           # TanStack Router routes
+│       │   ├── hooks/            # Custom React hooks (WebSocket, state)
+│       │   ├── utils/            # Utility functions and tRPC types
+│       │   └── main.tsx          # React application entry point
+│       ├── worker/               # Cloudflare Worker backend
+│       │   ├── index.ts          # Worker entry point
+│       │   └── trpc/             # tRPC router, context & procedures
+│       │       ├── router.ts     # Main tRPC router
+│       │       ├── context.ts    # Request context creation
+│       │       └── routers/      # Individual route handlers
+│       ├── vite.config.ts        # Vite build configuration
+│       └── wrangler.jsonc        # Cloudflare Worker configuration
+├── packages/                      # Shared code across applications
+│   └── data-ops/                 # Database operations, schemas, types
+│       ├── src/                  # TypeScript source code
+│       │   ├── db/               # Database connection and queries
+│       │   ├── zod/              # Zod validation schemas
+│       │   └── durable-object-helpers/  # Durable Object utilities
+│       ├── dist/                 # Built JavaScript (after pnpm run build-package)
+│       ├── auth-gen/             # Generated authentication types
+│       └── drizzle.config.ts     # Database configuration
+├── CLAUDE.md                      # Development guidance (this file)
+├── README.md                      # Project documentation
+├── package.json                  # Monorepo configuration with workspace scripts
+├── pnpm-workspace.yaml           # pnpm workspace configuration
+└── pnpm-lock.yaml                # Dependency lock file
 ```
+
+### Key Structural Notes
+
+- **No root `src/` folder**: Each app maintains its own source directory
+- **DataOps Package**: Must be built (`pnpm run build-package`) before apps can import shared code
+- **Workspace Dependencies**: Apps reference shared packages with `workspace:*` in package.json
+- **Independent Deployment**: Each app can be deployed separately to Cloudflare Workers
+- **Generated Files**: `routeTree.gen.ts`, `auth-gen/`, and `dist/` folders are auto-generated
 
 ## 🎓 Learning Resources
 
@@ -207,9 +328,15 @@ This course demonstrates why Cloudflare is the **perfect middle ground** between
 4. **Browser DevTools** for frontend issues
 
 ### Common Issues
-- **TypeScript Errors**: Run `pnpm cf-typegen` after adding Cloudflare bindings
-- **Build Failures**: Ensure all dependencies are installed with `pnpm install`  
-- **Deployment Issues**: Check Wrangler authentication with `wrangler whoami`
+
+- **"Cannot find module" errors**: Run `pnpm run build-package` to build the DataOps package
+- **TypeScript binding errors**: Run `pnpm cf-typegen` after adding Cloudflare resources
+- **Build failures**: Ensure all dependencies installed with `pnpm install` from project root
+- **Port 3000 in use**: Kill existing processes or change port in vite.config.ts
+- **Deployment authentication**: First deploy opens browser - click "Allow" for Wrangler access
+- **Deployment failures**: Check authentication with `wrangler whoami`
+- **Forking vs Cloning**: Must fork repository for deployment pipelines to work
+- **Wrangler configuration**: `wrangler.jsonc` grows complex as features are added
 
 ## 🚀 Next Steps
 

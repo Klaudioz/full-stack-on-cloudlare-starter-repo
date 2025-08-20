@@ -24,10 +24,12 @@ The project follows a **service-based architecture** where responsibilities are 
 ## Architecture
 
 ### Monorepo Structure
-- Uses pnpm workspaces for dependency management
-- Apps are located in `apps/` directory
-- Shared packages (when added) go in `packages/` directory
-- Workspace dependencies use `workspace:*` protocol
+- **No root `src/` folder**: Multiple applications/services in single repository
+- **Apps Directory**: `apps/` contains two main services (user-application, data-service)
+- **Packages Directory**: `packages/` contains shared code (DataOps package with Zod schemas, database queries, generic functions)
+- **Workspace Management**: Uses pnpm workspaces with `workspace:*` protocol
+- **Package Building**: DataOps package must be built (`pnpm run build-package`) before apps can use it
+- **Scaling Pattern**: Add new services to `apps/`, shared utilities to `packages/`
 
 ### Service Responsibilities
 
@@ -81,18 +83,29 @@ pnpm deploy                # Deploy to Cloudflare Workers
 
 ## Key File Locations
 
-### User Application
-- **Worker Entry**: `apps/user-application/worker/index.ts`
-- **tRPC Router**: `apps/user-application/worker/trpc/router.ts`
-- **tRPC Routers**: `apps/user-application/worker/trpc/routers/`
-- **React Entry**: `apps/user-application/src/main.tsx`
-- **Routes**: `apps/user-application/src/routes/`
-- **Components**: `apps/user-application/src/components/`
-- **Hooks**: `apps/user-application/src/hooks/`
+### User Application (`apps/user-application/`)
+- **Worker Entry**: `worker/index.ts`
+- **tRPC Router**: `worker/trpc/router.ts`
+- **tRPC Context**: `worker/trpc/context.ts`
+- **tRPC Routers**: `worker/trpc/routers/`
+- **React Entry**: `src/main.tsx`
+- **Router Config**: `src/router.tsx`
+- **Routes**: `src/routes/`
+- **Components**: `src/components/` (auth, dashboard, home-page, link, ui)
+- **Hooks**: `src/hooks/` (WebSocket, state management)
+- **Utilities**: `src/utils/trpc-types.ts`
 
-### Data Service
-- **Entry Point**: `apps/data-service/src/index.ts`
-- **Tests**: `apps/data-service/test/`
+### Data Service (`apps/data-service/`)
+- **Entry Point**: `src/index.ts`
+- **Tests**: `test/`
+- **Configuration**: `wrangler.jsonc`, `vitest.config.mts`
+
+### DataOps Package (`packages/data-ops/`)
+- **Database**: `src/db/database.ts`
+- **Zod Schemas**: `src/zod/` (links.ts, queue.ts)
+- **Durable Objects**: `src/durable-object-helpers/`
+- **Built Output**: `dist/` (JavaScript compiled from TypeScript)
+- **Auth Generated**: `auth-gen/auth.ts`
 
 ## Configuration Files
 
@@ -134,13 +147,92 @@ The project uses comprehensive TypeScript typing:
 - **Queue Events**: Asynchronous processing of link analysis, AI inference
 - **WebSocket Events**: Real-time updates for dashboard analytics
 
+## Initial Setup Workflow
+
+### Prerequisites Setup
+1. **GitHub Account**: Required for deployment pipelines and automated deployments
+2. **Fork Repository**: Fork the starter repo to your GitHub account (do not just clone)
+3. **Clone Your Fork**: `git clone https://github.com/YOUR_USERNAME/repo-name.git`
+4. **IDE Setup**: Cursor recommended (any IDE works)
+
+### First-Time Setup Commands
+```bash
+# 1. Install all dependencies across monorepo
+pnpm install
+
+# 2. Build DataOps package (required before starting apps)
+pnpm run build-package
+
+# 3. Start frontend application
+pnpm run dev-frontend
+# OR navigate to specific app: cd apps/user-application && pnpm dev
+```
+
+## Development Workflow Options
+
+### Monorepo Level (Recommended for Course)
+- Run commands from project root
+- Use `pnpm run dev-frontend` and `pnpm run dev-data-service`
+- Manages all services from single terminal location
+
+### Individual App Level
+- Navigate into specific app directory: `cd apps/user-application`
+- Run `pnpm dev` directly in app folder
+- Useful when focusing on single feature development
+- Can open individual apps in separate IDE instances
+
 ## Development Workflow
 
 1. **Start Development**: Use `pnpm dev-frontend` and `pnpm dev-data-service` concurrently
-2. **Service Binding Updates**: Run `pnpm cf-typegen` when adding Cloudflare resources
-3. **Type Safety**: Update `service-bindings.d.ts` files for new bindings
-4. **Testing**: Run `pnpm test` in each service before deployment
-5. **Deployment**: Deploy services independently using their respective deploy commands
+2. **Package Updates**: Run `pnpm run build-package` when updating DataOps package
+3. **Service Binding Updates**: Run `pnpm cf-typegen` when adding Cloudflare resources
+4. **Type Safety**: Update `service-bindings.d.ts` files for new bindings
+5. **Testing**: Run `pnpm test` in each service before deployment
+6. **Deployment**: Deploy services independently using their respective deploy commands
+
+## Deployment Workflow
+
+### First-Time Deployment Setup
+1. **Create Cloudflare Account**: Sign up for free at cloudflare.com
+2. **Navigate to Workers & Pages**: Focus on compute workers section in dashboard
+3. **CLI Authentication**: First `pnpm deploy` opens browser for Wrangler CLI access approval
+
+### Deployment Process
+```bash
+# From apps/user-application/ directory
+pnpm run deploy
+```
+
+This command:
+1. **Builds Application**: Runs `npm run build` to compile and bundle frontend
+2. **Bundles for Workers**: Creates Worker-compatible JavaScript bundle
+3. **Uploads Static Assets**: Deploys JS, HTML, CSS files to Cloudflare CDN globally
+4. **Uploads Server Code**: Deploys Worker runtime code for HTTP request handling
+5. **Provides URL**: Returns `{name}.{account}.workers.dev` deployment URL
+
+### Wrangler Configuration (`wrangler.jsonc`)
+- **Deployment Instructions**: Tells Cloudflare how to deploy your code
+- **Entry Point Specification**: Defines where application starts (`worker/index.ts`)
+- **Application Naming**: Provides unique identifier for Cloudflare tracking
+- **Resource Configuration**: Grows complex as more Cloudflare features are added
+- **Observability**: Enables logging and error tracking when set to true
+
+### Cloudflare Dashboard Features
+- **Deployments**: View deployment history and status
+- **Metrics**: Analytics on requests, sub-requests, usage patterns  
+- **Error Traces**: Debug application issues with detailed logs
+- **Bindings**: Manage asset bindings and service connections
+- **Domains & Routes**: Configure custom domains (covered later in course)
+- **Settings**: Application configuration management
+
+### Deployment Philosophy
+
+This course emphasizes **deployment-first learning**:
+- Deploy early and often to understand Cloudflare platform
+- Familiarity with deployment process reduces learning barriers
+- Cloudflare Dashboard becomes primary debugging tool
+- Production deployment experience from day one
+- CLI and Dashboard provide complementary management approaches
 
 ## Scaling Philosophy
 
@@ -149,6 +241,40 @@ This architecture follows **microservices patterns** that allow:
 - **Technology Flexibility**: Services can use different tech stacks as needed  
 - **Cost Optimization**: Pay only for compute resources actually used
 - **Maintainability**: Clear boundaries make debugging and updates easier
+
+## Cloudflare Resources Created
+
+This course creates and configures multiple Cloudflare resources across both applications:
+
+| Resource | Type | Application | Purpose | Configuration |
+|----------|------|-------------|---------|---------------|
+| **user-application** | Worker | User App | Frontend + tRPC backend | SPA with ASSETS binding |
+| **data-service** | Worker (EntryPoint) | Data Service | Background processing | nodejs_compat enabled |
+| **ASSETS** | Static Assets | User App | Frontend files (JS/CSS/HTML) | Global CDN deployment |
+| **D1 Database** | SQLite Database | Both | Application data storage | Edge-native SQL database |
+| **Queues** | Message Queue | Data Service | Async link processing | Background job processing |
+| **Durable Objects** | Stateful Computing | Data Service | WebSocket management | Real-time analytics state |
+| **Workflows** | Multi-step Jobs | Data Service | Complex job orchestration | Sequential task execution |
+| **Workers AI** | AI Inference | Data Service | Link content analysis | Edge AI processing |
+| **Browser Rendering** | Serverless Browser | Data Service | Page screenshot/analysis | Headless browser automation |
+| **KV Store** | Key-Value Store | Both | Session/cache storage | Global edge storage |
+| **R2 Storage** | Object Storage | Data Service | File/image storage | S3-compatible storage |
+| **Analytics Engine** | Analytics | Both | Usage metrics collection | Real-time analytics |
+| **Custom Domain** | DNS/Routing | User App | Production domain | Custom domain routing |
+
+### Resource Dependencies
+
+- **D1 Database**: Shared between both applications via service bindings
+- **Queues**: Data service consumes, user app produces via tRPC
+- **Durable Objects**: Manage WebSocket connections for real-time dashboard
+- **Workflows**: Orchestrate link analysis pipeline (fetch → render → analyze → store)
+
+### Deployment Notes
+
+- All resources are defined in respective `wrangler.jsonc` files
+- Service bindings connect user-application to data-service resources
+- Resource creation happens automatically during first deployment
+- Observability enabled for both Workers for logging and debugging
 
 ## Important Notes
 
