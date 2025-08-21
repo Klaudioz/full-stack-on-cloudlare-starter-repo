@@ -344,6 +344,112 @@ Cloudflare Workers: Same request = billed for ~8ms of actual CPU time
 - File system heavy operations
 - Traditional monolithic architectures
 
+## Framework Bundling & Environment Management
+
+### Understanding Cloudflare Worker Fundamentals
+
+At its core, a Cloudflare Worker is just an object with a `fetch` handler that processes HTTP requests. All full-stack frameworks ultimately compile down to this simple pattern - a fetch handler that manages routing and business logic.
+
+### Bundling Process in Full-Stack Frameworks
+
+Modern frameworks like Next.js, SvelteKit, and TanStack Start follow this bundling pattern:
+
+1. **Static Assets Bundle**: Client-side JavaScript, CSS, and HTML files get bundled and deployed to Cloudflare's CDN for fast global delivery
+2. **Server Bundle**: Server-side logic gets compiled into a Worker-compatible fetch handler
+
+This separation is crucial for performance and cost optimization:
+- **Static assets** are served from CDN (very fast, very cheap)
+- **Server logic** runs in Workers (billed per CPU time, not I/O wait time)
+
+### Static Assets vs Server Code
+
+When you deploy a full-stack application:
+
+- **Static Bundle**: All client-side code (React components, styles, images) gets uploaded to Cloudflare's CDN
+- **Server Bundle**: API routes, server components, and business logic get compiled into a Worker entry point
+- **Billing Impact**: Static asset requests don't invoke Workers, keeping costs low even for asset-heavy applications
+
+Example: A typical page load might make 25+ requests for assets, but only 1 Worker invocation for the initial page.
+
+### Environment Variables in Cloudflare Workers
+
+**❌ Don't Use Node.js Patterns**:
+```javascript
+// This won't work in Workers
+const client = new APIClient(process.env.API_KEY);
+```
+
+**✅ Use Worker Context Pattern**:
+```javascript
+// Access environment variables through context
+export default {
+  async fetch(request, env, ctx) {
+    const apiKey = env.MY_API_KEY;
+    const client = new APIClient(apiKey);
+    // Handle request logic
+  }
+};
+```
+
+### Development Environment Setup
+
+1. **Create `dev.vars` file** (add to .gitignore):
+```
+MY_API_KEY=your-local-development-key
+DATABASE_URL=your-local-db-url
+```
+
+2. **Generate TypeScript types**:
+```bash
+pnpm cf-typegen
+```
+
+3. **Access in code** (example with Hono):
+```javascript
+app.get('/api/data', (c) => {
+  const apiKey = c.env.MY_API_KEY;
+  // Use the environment variable
+});
+```
+
+### Production Environment Management
+
+#### Method 1: Per-Worker Secrets
+- Navigate to Worker → Settings → Variables and Secrets
+- Add secrets with exact same names as in `dev.vars`
+- Secrets are encrypted and never visible after creation
+
+#### Method 2: Shared Secret Store (Recommended)
+- Use Cloudflare Secret Store for secrets shared across multiple Workers
+- Configure in `wrangler.jsonc`:
+```json
+{
+  "secret_store": [
+    {
+      "binding": "MY_SECRETS",
+      "store_id": "your-secret-store-id"
+    }
+  ]
+}
+```
+
+### Framework-Specific Environment Handling
+
+- **Next.js**: Uses `getRequestContext()` to access Cloudflare environment
+- **TanStack Start**: Uses Nitro runtime, supports `process.env` during server runtime
+- **Native Workers**: Access through `env` parameter in fetch handler
+- **Hono**: Access through context `c.env`
+
+### Build Tool Evolution: Vite Integration
+
+Modern frameworks increasingly use Vite for bundling, which provides:
+- Standardized environment variable API
+- Cross-platform deployment compatibility  
+- Cloudflare-specific Vite plugin for seamless integration
+- Unified build process across different frameworks
+
+The future of Cloudflare deployment is trending toward Vite-based build tools that abstract away platform-specific complexity while maintaining performance and developer experience.
+
 ## Important Notes
 
 - The project uses compatibility_date "2025-06-17" for both Workers

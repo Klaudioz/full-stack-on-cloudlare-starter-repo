@@ -379,4 +379,143 @@ After completing this course, you'll be equipped to:
 - **Deploy Edge Applications** globally with confidence
 - **Optimize for Cost and Performance** at scale
 
+## 📦 Understanding Bundling & Environment Variables
+
+### How Full-Stack Frameworks Work on Cloudflare
+
+Every full-stack framework ultimately compiles down to the same foundation: **a fetch handler that processes HTTP requests**. Whether you're using Next.js, SvelteKit, or TanStack Start, they all create two distinct bundles:
+
+#### 📱 Static Assets Bundle
+- React components, CSS, images, JavaScript bundles
+- Deployed to **Cloudflare CDN** for lightning-fast global delivery
+- Cached automatically, extremely cheap to serve
+- **Zero Worker invocations** for asset requests
+
+#### ⚙️ Server Bundle  
+- API routes, server components, business logic
+- Compiled into a **Worker-compatible fetch handler**
+- Runs on Cloudflare's edge, billed only for CPU time
+- Handles dynamic requests and data processing
+
+### 💰 Cost Impact: Why This Matters
+
+A typical page load might make 25+ requests for assets, but **only 1 Worker invocation**:
+- **25 CDN requests**: Virtually free, served from global cache
+- **1 Worker request**: Minimal cost, billed only for active CPU time
+
+This architecture keeps your application lightning-fast and cost-effective at scale.
+
+### 🔐 Environment Variables: The Cloudflare Way
+
+#### ❌ Traditional Node.js Approach (Won't Work)
+```javascript
+// This fails on Cloudflare Workers
+const client = new APIClient(process.env.API_KEY);
+```
+
+#### ✅ Cloudflare Worker Approach
+```javascript
+// Access through Worker context
+export default {
+  async fetch(request, env, ctx) {
+    const apiKey = env.MY_API_KEY;
+    const client = new APIClient(apiKey);
+    return handleRequest(request, client);
+  }
+};
+```
+
+### 🛠️ Development Environment Setup
+
+#### 1. Create Local Environment File
+Create `dev.vars` in your app directory (add to `.gitignore`):
+```bash
+# apps/user-application/dev.vars
+DATABASE_URL=your-local-database-url
+STRIPE_SECRET_KEY=sk_test_your_test_key
+API_SECRET=your-development-secret
+```
+
+#### 2. Generate TypeScript Types
+```bash
+cd apps/user-application
+pnpm cf-typegen
+```
+This creates type-safe environment variable access in your code.
+
+#### 3. Access in Your Application
+Framework-specific examples:
+
+**Hono (Direct Workers)**:
+```javascript
+app.get('/api/data', (c) => {
+  const dbUrl = c.env.DATABASE_URL;
+  const apiSecret = c.env.API_SECRET;
+  // Use environment variables
+});
+```
+
+**Next.js on Cloudflare**:
+```javascript
+import { getRequestContext } from '@cloudflare/next-on-pages';
+
+export default async function handler(req, res) {
+  const { env } = getRequestContext();
+  const apiKey = env.API_SECRET;
+  // Handle request with environment variables
+}
+```
+
+### 🌍 Production Environment Management
+
+#### Option 1: Per-Worker Secrets
+1. Navigate to **Cloudflare Dashboard** → Your Worker → **Settings** → **Variables and Secrets**
+2. Add each secret with the **exact same name** as in your `dev.vars`
+3. Choose **"Secret"** for sensitive data (encrypted, never visible again)
+
+#### Option 2: Shared Secret Store (Enterprise)
+For secrets used across multiple Workers:
+
+1. Create secrets in **Cloudflare Secret Store**
+2. Configure in `wrangler.jsonc`:
+```json
+{
+  "secret_store": [
+    {
+      "binding": "SHARED_SECRETS", 
+      "store_id": "your-secret-store-id"
+    }
+  ]
+}
+```
+3. Access via `env.SHARED_SECRETS.get("SECRET_NAME")`
+
+### 🔄 Framework-Specific Differences
+
+| Framework | Environment Access | Notes |
+|-----------|-------------------|-------|
+| **Native Workers** | `env` parameter | Direct access in fetch handler |
+| **Hono** | `c.env` | Through context object |
+| **Next.js** | `getRequestContext()` | Cloudflare-specific helper |
+| **TanStack Start** | `process.env` | Uses Nitro runtime compatibility |
+
+### 🚀 The Future: Vite Integration
+
+Modern frameworks are converging on **Vite** as the build tool standard:
+
+- **Unified environment API** across frameworks
+- **Cloudflare Vite plugin** for seamless deployment  
+- **Cross-platform compatibility** without vendor lock-in
+- **Simplified configuration** with better developer experience
+
+Frameworks adopting Vite (Next.js, Nuxt, SvelteKit, TanStack Start) provide the smoothest Cloudflare deployment experience.
+
+### 🎯 Best Practices
+
+1. **Never commit secrets** - Always add `dev.vars` to `.gitignore`
+2. **Use identical naming** - Match local and production environment variable names exactly
+3. **Generate types** - Run `pnpm cf-typegen` after adding new variables
+4. **Prefer Secret Store** - For shared secrets across multiple services
+5. **Framework patterns** - Follow your framework's specific environment access patterns
+
 Ready to build the future of web applications? Let's get started! 🎯
