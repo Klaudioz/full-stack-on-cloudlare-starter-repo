@@ -440,15 +440,86 @@ app.get('/api/data', (c) => {
 - **Native Workers**: Access through `env` parameter in fetch handler
 - **Hono**: Access through context `c.env`
 
-### Build Tool Evolution: Vite Integration
+### TanStack Start & Nitro Runtime Integration
 
-Modern frameworks increasingly use Vite for bundling, which provides:
-- Standardized environment variable API
-- Cross-platform deployment compatibility  
-- Cloudflare-specific Vite plugin for seamless integration
-- Unified build process across different frameworks
+**TanStack Start** is built on top of **Nitro**, a universal server toolkit that provides cross-platform server functionality. Nitro acts as an abstraction layer that handles the complexity of deploying to different runtimes.
 
-The future of Cloudflare deployment is trending toward Vite-based build tools that abstract away platform-specific complexity while maintaining performance and developer experience.
+#### How Nitro Works with Cloudflare Workers
+
+1. **Build-Time Compilation**: Nitro compiles TanStack Start applications into Worker-compatible bundles
+2. **Runtime Adaptation**: Nitro translates standard Node.js patterns (like `process.env`) into Worker-compatible code
+3. **Cross-Platform Support**: Same codebase can deploy to Workers, Node.js, Vercel, etc.
+
+#### Environment Variable Handling in TanStack Start
+
+Because of Nitro's compilation process, TanStack Start applications can use familiar Node.js patterns:
+
+```javascript
+// This works in TanStack Start because Nitro compiles it properly
+const dbUrl = process.env.DATABASE_URL;
+const apiClient = new APIClient(process.env.API_KEY);
+```
+
+**Important**: The `process.env` access must happen during **server runtime**, not at build time. Nitro ensures these variables are available from the Cloudflare environment during request handling.
+
+#### Nitro's Role in the Ecosystem
+
+- **Universal Build Tool**: Like Vite for server-side logic
+- **Runtime Abstraction**: Handles platform-specific differences
+- **Framework Foundation**: Powers TanStack Start, Nuxt, and other frameworks
+- **Deployment Adapters**: Automatically generates platform-specific bundles
+
+### Vite: The Modern Build Tool Standard
+
+**Vite** has emerged as the leading build tool for modern web applications, and its adoption is transforming how frameworks handle Cloudflare deployments.
+
+#### Why Vite Matters for Cloudflare
+
+Vite provides standardized solutions to common deployment challenges:
+
+- **Universal Build Process**: Consistent bundling across different frameworks
+- **Environment Variable API**: Standardized way to handle environment variables across platforms
+- **Cross-Platform Compatibility**: Deploy the same codebase to multiple providers without vendor lock-in
+- **Development Server Logic**: Built-in dev server functionality with hot module replacement
+
+#### Vite's Environment Variable System
+
+Vite introduces a unified approach to environment variables that works consistently across frameworks:
+
+```javascript
+// Vite's standardized environment API
+import.meta.env.VITE_API_KEY  // Client-side variables (prefixed with VITE_)
+process.env.SECRET_KEY        // Server-side variables (framework-specific access)
+```
+
+#### Framework Adoption of Vite
+
+Major frameworks are migrating to Vite as their primary build tool:
+
+- **TanStack Start**: Currently migrating everything to Vite
+- **Next.js**: Exploring Vite integration for improved developer experience
+- **SvelteKit**: Built on Vite by default
+- **Nuxt**: Uses Vite as the underlying build system
+
+#### Cloudflare Vite Plugin
+
+Cloudflare has developed an official Vite plugin that:
+
+- **Simplifies Configuration**: Automatically configures Cloudflare-specific settings
+- **Framework Integration**: Works with any Vite-based framework
+- **Local Development**: Provides accurate local development environment
+- **Type Generation**: Automatically generates TypeScript types for Cloudflare bindings
+
+#### The Future of Vite + Cloudflare
+
+The combination of Vite and Cloudflare represents the future of web deployment:
+
+1. **Standardization**: Unified build process across all frameworks
+2. **Platform Abstraction**: Write once, deploy to multiple edge platforms
+3. **Developer Experience**: Consistent tooling and configuration patterns
+4. **Performance**: Optimized bundling for edge computing environments
+
+Frameworks that embrace Vite will have the best long-term compatibility with Cloudflare's evolving platform, making them safer choices for new projects.
 
 ## Important Notes
 

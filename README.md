@@ -499,16 +499,118 @@ For secrets used across multiple Workers:
 | **Next.js** | `getRequestContext()` | Cloudflare-specific helper |
 | **TanStack Start** | `process.env` | Uses Nitro runtime compatibility |
 
-### 🚀 The Future: Vite Integration
+### 🔧 TanStack Start & Nitro: The Universal Runtime
 
-Modern frameworks are converging on **Vite** as the build tool standard:
+**TanStack Start** leverages **Nitro** as its underlying server toolkit, which explains why it can use familiar Node.js patterns on Cloudflare Workers.
 
-- **Unified environment API** across frameworks
-- **Cloudflare Vite plugin** for seamless deployment  
-- **Cross-platform compatibility** without vendor lock-in
-- **Simplified configuration** with better developer experience
+#### What is Nitro?
 
-Frameworks adopting Vite (Next.js, Nuxt, SvelteKit, TanStack Start) provide the smoothest Cloudflare deployment experience.
+Nitro is a **universal server toolkit** that acts as an abstraction layer between your application code and the deployment runtime:
+
+- **Build-Time Magic**: Compiles your server logic into platform-specific bundles
+- **Runtime Translation**: Converts Node.js patterns into Worker-compatible code
+- **Cross-Platform**: Same codebase deploys to Workers, Node.js, Vercel, Netlify, etc.
+
+#### How Nitro Enables `process.env` on Workers
+
+```javascript
+// This works in TanStack Start applications:
+export async function GET() {
+  const apiKey = process.env.API_KEY;  // ✅ Nitro handles this
+  const client = new APIClient(apiKey);
+  return new Response(JSON.stringify(data));
+}
+```
+
+**Behind the scenes**: Nitro's compilation process ensures `process.env` accesses are transformed into proper Cloudflare environment variable lookups during the build step.
+
+#### Nitro's Ecosystem Impact
+
+- **Powers Multiple Frameworks**: TanStack Start, Nuxt, H3, and others
+- **Universal Patterns**: Write once, deploy anywhere philosophy
+- **Framework Evolution**: Enables rapid framework development with consistent deployment
+
+### ⚡ Vite: The Build Tool Revolution
+
+**Vite** is revolutionizing how modern web applications are built and deployed, especially on edge platforms like Cloudflare.
+
+#### 🎯 Why Vite is Winning
+
+Vite solves fundamental problems that have plagued JavaScript build tools for years:
+
+- **Lightning Fast**: Instant server start and hot module replacement
+- **Universal Standards**: Consistent build process across all frameworks
+- **Platform Agnostic**: Same codebase deploys anywhere without vendor lock-in
+- **Developer First**: Exceptional development experience with minimal configuration
+
+#### 🌐 Vite's Environment Variable Solution
+
+Vite provides a standardized approach that works consistently across frameworks:
+
+```javascript
+// Client-side variables (publicly accessible)
+const apiUrl = import.meta.env.VITE_API_URL;
+
+// Server-side variables (secure, framework-specific access)
+const secretKey = process.env.SECRET_KEY;  // TanStack Start/Nuxt
+const secretKey = c.env.SECRET_KEY;        // Hono
+```
+
+#### 📈 Framework Migration to Vite
+
+The entire ecosystem is converging on Vite:
+
+| Framework | Vite Status | Benefits |
+|-----------|-------------|----------|
+| **SvelteKit** | ✅ Built on Vite | Native Cloudflare support |
+| **Nuxt 3** | ✅ Vite by default | Seamless edge deployment |
+| **TanStack Start** | 🚧 Migrating fully | Improved Cloudflare compatibility |
+| **Next.js** | 🔍 Exploring | Future Vite integration planned |
+
+#### 🔧 Cloudflare Vite Plugin
+
+Cloudflare's official Vite plugin provides:
+
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite';
+import { cloudflare } from '@cloudflare/vite-plugin';
+
+export default defineConfig({
+  plugins: [
+    cloudflare({
+      // Auto-configures Cloudflare-specific settings
+      // Generates TypeScript types for bindings
+      // Provides local development environment
+    })
+  ]
+});
+```
+
+**Key Features**:
+- **Zero Configuration**: Works out of the box with Cloudflare
+- **Type Safety**: Auto-generates TypeScript types for all Cloudflare resources
+- **Local Development**: Accurate simulation of Cloudflare environment
+- **Framework Agnostic**: Works with any Vite-based framework
+
+#### 🚀 The Vite + Cloudflare Future
+
+This combination represents the future of web development:
+
+1. **Write Once, Deploy Everywhere**: Same codebase works on Cloudflare, Vercel, Netlify, etc.
+2. **Consistent Developer Experience**: Unified tooling across all frameworks
+3. **Edge-First Design**: Optimized for modern edge computing platforms
+4. **No Vendor Lock-in**: Easy migration between platforms
+
+#### 💡 Framework Selection Strategy
+
+When choosing a framework for Cloudflare development, prioritize those embracing Vite:
+
+- **Best Choice**: SvelteKit, Nuxt (full Vite integration)
+- **Good Choice**: TanStack Start (migrating to Vite)
+- **Future Proof**: Any framework announcing Vite migration
+
+Frameworks that fully embrace Vite will have the smoothest Cloudflare experience and the best long-term compatibility.
 
 ### 🎯 Best Practices
 
