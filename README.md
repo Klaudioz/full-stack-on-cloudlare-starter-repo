@@ -183,6 +183,37 @@ This course builds a comprehensive SaaS application using multiple Cloudflare se
 - **⚡ Performance**: Sub-10ms cold starts and built-in CDN
 - **🛠️ Developer Experience**: Simple deployment and excellent tooling
 
+### 🧠 Understanding V8 Isolates
+
+Cloudflare Workers run on **V8 Isolates** - the same technology that powers individual browser tabs in Chrome. This architecture provides unique advantages over traditional serverless platforms:
+
+#### Traditional Serverless vs Workers
+
+| Aspect | AWS Lambda | Cloudflare Workers |
+|--------|------------|-------------------|
+| **Runtime** | Container/VM based | V8 Isolates |
+| **Cold Start** | 50-150ms + runtime boot | ~5ms |
+| **Billing** | Full request duration | CPU time only |
+| **Memory** | 128MB-10GB | 128MB per isolate |
+| **Global** | Regional deployment | 270+ edge locations |
+
+#### Key Benefits
+
+- **⚡ Ultra-Fast Cold Starts**: 5ms vs 150ms+ for traditional serverless
+- **💸 CPU-Only Billing**: Only pay for active compute, not I/O waiting time
+- **🌐 Edge Execution**: Code runs closest to users globally
+- **🪶 Lightweight**: No container overhead, direct JavaScript execution
+
+#### Perfect for Modern Apps
+
+V8 Isolates excel at modern application patterns:
+- **API-driven apps** with database/external service calls
+- **AI-powered features** with LLM API integrations  
+- **Real-time applications** with WebSocket connections
+- **JAMstack applications** with dynamic server-side logic
+
+**Example**: A 1-second API request that waits 800ms for AI response costs 1 full second on traditional serverless, but only ~8ms of CPU time on Workers.
+
 ## 📚 Course Learning Path
 
 This repository is structured as a **progressive learning experience**:
