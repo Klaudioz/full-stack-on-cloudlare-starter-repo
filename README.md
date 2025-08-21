@@ -53,6 +53,263 @@ This project demonstrates **service-based architecture** with clear separation o
 - **Better Auth** - Modern authentication
 - **Drizzle ORM** - Type-safe database operations
 
+## 🔗 Understanding tRPC Routes
+
+**tRPC routes** are the backbone of type-safe communication between your frontend and backend, providing seamless data exchange with full TypeScript integration.
+
+### 🎯 What is a tRPC Route?
+
+A tRPC route is a type-safe API endpoint that:
+
+- **📝 Defines Data Contracts**: Specifies exactly what data goes in and comes out
+- **🔒 Ensures Type Safety**: Frontend knows the exact shape of data to expect
+- **🧭 Enables Code Navigation**: Click from frontend usage to jump directly to backend code
+- **⚡ Handles Business Logic**: Processes requests, queries databases, returns structured data
+
+### 🏗️ tRPC Route Architecture
+
+#### Backend Route Definition
+```typescript
+// worker/trpc/routers/links.ts
+export const linksRouter = router({
+  getClicksByCountry: procedure
+    .input(z.object({ 
+      linkId: z.string() 
+    }))
+    .output(z.array(z.object({ 
+      countryCode: z.string(), 
+      count: z.number() 
+    })))
+    .query(async ({ input, ctx }) => {
+      // Database query with full type safety
+      const data = await ctx.db.query.getClicksByCountry(input.linkId);
+      return data; // TypeScript ensures this matches output schema
+    }),
+});
+```
+
+#### Frontend Usage with TanStack Query
+```typescript
+// src/components/TopCountriesTable.tsx
+export function TopCountriesTable() {
+  const { data: clicksByCountry } = api.links.getClicksByCountry.useSuspenseQuery({
+    linkId: "example-id" // TypeScript validates this input
+  });
+  
+  return (
+    <table>
+      {clicksByCountry.map(country => ( // Full autocomplete available
+        <tr key={country.countryCode}>
+          <td>{country.countryCode}</td>
+          <td>{country.count}</td>
+        </tr>
+      ))}
+    </table>
+  );
+}
+```
+
+### 🚀 Why tRPC Routes Are Powerful
+
+#### 1. **End-to-End Type Safety**
+- Changes to backend automatically update frontend types
+- Compile-time error detection prevents runtime issues
+- Refactoring works across the entire stack
+
+#### 2. **Enhanced Developer Experience** 
+- **IDE Autocomplete**: Full IntelliSense for API calls
+- **Code Navigation**: Command+click jumps from frontend to backend
+- **Error Detection**: TypeScript catches mismatches before deployment
+
+#### 3. **Seamless Data Fetching**
+- **TanStack Query Integration**: Automatic caching, retry logic, loading states
+- **Suspense Support**: Clean loading boundaries with React Suspense
+- **Optimistic Updates**: Easy implementation of optimistic UI patterns
+
+#### 4. **Framework Agnostic**
+- Works with React, Vue, Svelte, Solid, or any TypeScript frontend
+- Same patterns across different project structures
+- Easy migration between frontend frameworks
+
+### 🔄 Data Flow Example
+
+```typescript
+// 1. User clicks button in React component
+<button onClick={() => createLink.mutate({ url: "https://example.com" })}>
+  Create Link
+</button>
+
+// 2. tRPC route handles the request
+createLink: procedure
+  .input(z.object({ url: z.string().url() }))
+  .mutation(async ({ input, ctx }) => {
+    // 3. Database operation with type safety
+    const link = await ctx.db.insert(links).values({
+      url: input.url,
+      shortCode: generateShortCode(),
+    });
+    return link; // 4. Typed response back to frontend
+  })
+
+// 5. Frontend receives typed data and updates UI automatically
+```
+
+### 🎯 Best Practices for tRPC Routes
+
+1. **Use Zod Schemas**: Define clear input/output validation
+2. **Meaningful Names**: Route names should describe the business operation
+3. **Proper Error Handling**: Use tRPC error types for consistent error responses
+4. **Context Usage**: Leverage context for database connections, auth, etc.
+5. **Route Organization**: Group related routes in separate router files
+
+## 🛣️ TanStack Router: Type-Safe Navigation
+
+**TanStack Router** provides powerful, type-safe routing for React applications with advanced data loading capabilities that eliminate traditional loading states.
+
+### 🗂️ File-Based Routing Convention
+
+TanStack Router uses a file-based approach similar to Next.js but with simpler conventions:
+
+```
+src/routes/
+├── index.tsx                    // → /
+├── app/                         // → /app
+│   ├── index.tsx               // → /app (dashboard)
+│   └── auth/                   // → /app/auth  
+│       └── index.tsx           // → /app/auth (protected dashboard)
+└── _authenticated.tsx          // Layout for protected routes
+```
+
+**Key Differences from Next.js**:
+- ✅ **No `.page.tsx` suffix** - any file becomes a route
+- ✅ **Directory = URL structure** - clean, predictable mapping
+- ✅ **Index files** represent the base route of their directory
+
+### 🏗️ Route File Structure
+
+Each route file exports a route configuration with data loading and component:
+
+```typescript
+// src/routes/app/auth/index.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { DashboardPage } from '../../../components/dashboard/DashboardPage'
+
+export const Route = createFileRoute('/app/auth/')({
+  // 🚀 Data loading BEFORE component renders
+  loader: async ({ context }) => {
+    // Prefetch multiple tRPC queries in parallel
+    await Promise.all([
+      context.queryClient.prefetchQuery(api.links.getAll.queryOptions()),
+      context.queryClient.prefetchQuery(api.analytics.getClicksByCountry.queryOptions()),
+      context.queryClient.prefetchQuery(api.analytics.getTopDevices.queryOptions()),
+    ]);
+  },
+  // 🎨 React component renders with data already available
+  component: DashboardPage,
+});
+```
+
+### ⚡ Data Loading Magic
+
+#### Traditional Approach (Loading Spinners Everywhere)
+```typescript
+function Dashboard() {
+  const { data: links, isLoading: linksLoading } = api.links.getAll.useQuery();
+  const { data: countries, isLoading: countriesLoading } = api.analytics.getClicksByCountry.useQuery();
+  
+  if (linksLoading || countriesLoading) {
+    return <LoadingSpinner />; // 😤 Multiple loading states
+  }
+  
+  return <DashboardContent links={links} countries={countries} />;
+}
+```
+
+#### TanStack Router Approach (Data Ready Immediately)
+```typescript
+// 🎯 Route loader prefetches everything
+loader: async ({ context }) => {
+  await Promise.all([
+    context.queryClient.prefetchQuery(api.links.getAll.queryOptions()),
+    context.queryClient.prefetchQuery(api.analytics.getClicksByCountry.queryOptions()),
+  ]);
+},
+
+// ✨ Component renders with data already available
+function Dashboard() {
+  const { data: links } = api.links.getAll.useSuspenseQuery();
+  const { data: countries } = api.analytics.getClicksByCountry.useSuspenseQuery();
+  
+  // No loading states needed - data is guaranteed to be available!
+  return <DashboardContent links={links} countries={countries} />;
+}
+```
+
+### 🚀 Key Features
+
+#### 1. **Type-Safe Everything**
+- **URL Parameters**: Fully typed route parameters
+- **Search Params**: Type-safe query string handling
+- **Navigation**: Compile-time route validation
+
+#### 2. **Advanced Data Loading**
+- **Parallel Prefetching**: Load multiple data sources simultaneously
+- **Route-Level Caching**: Intelligent data caching across route changes
+- **Error Boundaries**: Built-in error handling for data loading failures
+
+#### 3. **Route Protection & Layouts**
+```typescript
+// _authenticated.tsx - Layout for protected routes
+export const Route = createFileRoute('/_authenticated')({
+  beforeLoad: ({ context }) => {
+    // Redirect to login if not authenticated
+    if (!context.user) {
+      throw redirect({ to: '/login' });
+    }
+  },
+  component: AuthenticatedLayout,
+});
+```
+
+#### 4. **Seamless tRPC Integration**
+```typescript
+// Perfect integration with tRPC and TanStack Query
+loader: async ({ context }) => {
+  // Type-safe prefetching of tRPC routes
+  await context.queryClient.prefetchQuery(
+    api.links.getClicksByCountry.queryOptions({ linkId: params.linkId })
+  );
+},
+```
+
+### 🎯 Why This Approach Wins
+
+#### ✅ **Better User Experience**
+- **Instant Page Loads**: Data loads before navigation completes
+- **No Loading Spinners**: Components render immediately with data
+- **Smooth Transitions**: Seamless navigation between pages
+
+#### ✅ **Better Developer Experience**
+- **Type Safety**: Catch routing errors at compile time
+- **Predictable Data Flow**: Always know when data is available
+- **Simple Patterns**: Consistent approach across all routes
+
+#### ✅ **Better Performance**
+- **Parallel Loading**: Multiple data sources load simultaneously
+- **Smart Caching**: Avoid unnecessary re-fetching
+- **Code Splitting**: Automatic route-based bundle splitting
+
+### 🔗 Integration with Our Stack
+
+TanStack Router works seamlessly with our entire technology stack:
+
+- **🔗 tRPC Routes**: Type-safe API calls with prefetching
+- **📊 TanStack Query**: Intelligent caching and state management  
+- **🔐 Authentication**: Route-level protection and redirects
+- **📱 React Suspense**: Clean loading boundaries and error handling
+
+This combination eliminates the complexity of traditional React data fetching patterns while providing exceptional type safety and performance.
+
 ### Cloudflare Services
 - **Workers AI** - AI inference at the edge
 - **Queues** - Async message processing
